@@ -9,7 +9,7 @@ const TILE_TYPES = {
 const ENEMY_DAMAGE = -20;
 const DEFAULT_PLAYER_DAMAGE = -20;
 const INCREASED_PLAYER_DAMAGE = -40;
-const HEAL = 40;
+const HEAL = +40;
 
 const field = document.querySelector(".field");
 const damageDisplay = document.querySelector('.player-damage');
@@ -21,40 +21,52 @@ let playerDamage = DEFAULT_PLAYER_DAMAGE;
 let enemyCount = 10;
 
 /**
- * @param {number} first 
- * @param {number} second 
- * @returns {boolean}
+ * Returns either 2 numbers are near in the given area.
+ * For example: 1 and 2 are near in the area 2 but not near in the area 0.
+ * @param {number} first First number
+ * @param {number} second Second number
+ * @param {number} area Area
+ * @returns {boolean} Are number near
  */
 function areNear(first, second, area) {
-    return Math.abs(first - second) < area;
+    return Math.abs(first - second) <= area;
 }
 
 /**
- * @param {[number, number]} firstCoords 
- * @param {[number, number]} secondCoords 
- * @returns {boolean}
+ * Returns either [x1, y1] is near the [x2, y2] in the given area.
+ * For example: [5, 6] is near the [7, 7] in the area 3 but not near in the area 1.
+ * @param {[number, number]} firstCoords First pair of coords
+ * @param {[number, number]} secondCoords Second pair of coords
+ * @param {number} area Area
+ * @returns {boolean} Are coords near
  */
 function coordsNear(firstCoords, secondCoords, area) {
     return areNear(firstCoords[0], secondCoords[0], area) && areNear(firstCoords[1], secondCoords[1], area);
 }
 
 /**
- * @param {number} start 
- * @param {number} end 
- * @returns {number}
+ * Gives pseudo random integer in range [start, end]
+ * @param {number} start Bottom edge
+ * @param {number} end Top edge
+ * @returns {number} result
  */
 function randInt(start, end) {
     return Math.round(Math.random() * (end - start) + start);
 }
 
+/**
+ * Sets player damage to newDamage
+ * @param {number} newDamage Damage to set 
+ */
 function setPlayerDamage(newDamage) {
     playerDamage = newDamage;
     damageDisplay.innerHTML = damageDisplay.innerHTML.split(' ')[0] + ` ${Math.abs(newDamage)}`;
 }
 
 /**
- * @param {HTMLDivElement} entity 
- * @returns {[number, number]}
+ * Returns coords of entity
+ * @param {HTMLDivElement} entity Target entity
+ * @returns {[number, number]} Pair of coords
  */
 function getCoords(entity) {
     const x = parseInt(entity.style.left) / 25;
@@ -63,17 +75,21 @@ function getCoords(entity) {
 }
 
 /**
- * @param {HTMLDivElement} entity 
- * @returns {number}
+ * Returns health of the entity
+ * @param {HTMLDivElement} entity Target entity
+ * @returns {number} Entity's health 
  */
 function getHealth(entity) {
     return parseInt(entity.children[0].style.width);
 }
 
 /**
- * @param {HTMLDivElement} entity 
+ * Adds health to entity
+ * @param {HTMLDivElement} entity Target Entity
+ * @param {number} dh Health difference
+ * @returns New health
  */
-function setHealth(entity, dh) {
+function addHealth(entity, dh) {
     const oldHealth = getHealth(entity);
     let newHealth = oldHealth + dh;
     if (newHealth > 100) {
@@ -86,7 +102,8 @@ function setHealth(entity, dh) {
 }
 
 /**
- * @param {string[][]} gameMap 
+ * Draws 5-10 rooms, 3-8 tiles sized in every direction
+ * @param {string[][]} gameMap Game Map
  */
 function drawRooms(gameMap) {
     for (let roomNumber = 0; roomNumber < randInt(5, 10); roomNumber++) {
@@ -105,8 +122,9 @@ function drawRooms(gameMap) {
 }
 
 /**
- * @param {string[][]} gameMap 
- * @param {"x" | "y"} direction 
+ * Draws 3-5 corridors in the give direction 
+ * @param {string[][]} gameMap Game map
+ * @param {"x" | "y"} direction Parallel direction of the corridors
  */
 function drawCorridors(gameMap, direction) {
     for (let corridorNumber = 0; corridorNumber < randInt(3, 5); corridorNumber++) {
@@ -121,14 +139,26 @@ function drawCorridors(gameMap, direction) {
         }
     }
 }
-
+/**
+ * Draws 2 swords in random places on the game map
+ * @param {string[][]} gameMap Game map 
+ * @returns {HTMLDivElement[]} Array of drawn swords
+ */
 const drawSwords = (gameMap) => drawUtilities(gameMap, 2, TILE_TYPES.sw);
+
+/**
+ * Draws 10 heals in random places on the game map
+ * @param {string[][]} gameMap Game map
+ * @returns {HTMLDivElement[]} Array of heals
+ */
 const drawHP = (gameMap) => drawUtilities(gameMap, 10, TILE_TYPES.hp);
 
 /**
- * @param {string[][]} gameMap 
- * @param {number} entityCount 
- * @param {'sw' | 'hp'} entityType 
+ * Draws utilCount utility items in random places on the game map
+ * @param {string[][]} gameMap Game map
+ * @param {number} entityCount Amount of entities
+ * @param {'sw' | 'hp'} entityType Sword or heal to draw
+ * @returns {HTMLDivElement[]} Array of draw utilities
  */
 function drawUtilities(gameMap, utilCount, utilType) {
     const utils = [];
@@ -149,7 +179,8 @@ function drawUtilities(gameMap, utilCount, utilType) {
 }
 
 /**
- * @param {HTMLDivElement} owner 
+ * Draws health bar for the owner
+ * @param {HTMLDivElement} owner Owner of the health bar
  */
 function drawHealthBar(owner) {
     const healthBar = document.createElement("div");
@@ -159,7 +190,8 @@ function drawHealthBar(owner) {
 }
 
 /**
- * @returns {string[][]}
+ * Draws game map
+ * @returns {string[][]} Game map
  */
 function drawGameMap() {
     const gameMap = new Array(ROWS);
@@ -185,10 +217,11 @@ function drawGameMap() {
 }
 
 /**
- * @param {HTMLDivElement} entity 
- * @param {number} dx 
- * @param {number} dy
- * @returns {[number, number]}
+ * Moves entity to [x + dx, y + dy] coords
+ * @param {HTMLDivElement} entity Entity to move
+ * @param {number} dx X increase
+ * @param {number} dy Y increase
+ * @returns {[number, number]} New coords
  */
 function moveEntity(entity, dx, dy) {
     const oldX = parseInt(entity.style.left) / 25;
@@ -211,25 +244,36 @@ const hps = drawHP(gameMap);
 const enemies = drawEnemies(gameMap);
 const player = drawPlayer(gameMap);
 
-const setPlayerHealth = (dh) => {
-    const newHealth = setHealth(player, dh);
+/**
+ * Increases player health by dh
+ * @param {number} dh Health increase
+ * @returns {number} New health
+ */
+const addPlayerHealth = (dh) => {
+    const newHealth = addHealth(player, dh);
     healthDisplay.innerHTML = healthDisplay.innerHTML.split(' ')[0] + ` ${newHealth}`;
     return newHealth;
 }
 
+/**
+ * Checks for enemies in area of 1 near the player/
+ * Damages player for amount of enemies in the area.
+ * @param {HTMLDivElement} player 
+ */
 function checkForEnemies(player) {
     const playerCoords = getCoords(player);
 
     const enemiesNearby = enemies.filter((enemy) => {
         const enemyCoords = getCoords(enemy);
-        return coordsNear(playerCoords, enemyCoords, 2);
+        return coordsNear(playerCoords, enemyCoords, 1);
     });
-    !setPlayerHealth(ENEMY_DAMAGE * enemiesNearby.length) && window.location.reload();
+    !addPlayerHealth(ENEMY_DAMAGE * enemiesNearby.length) && window.location.reload();
 }
 
 /**
- * @param {string[][]} gameMap
- * @returns {HTMLDivElement}
+ * Draws player on the game map
+ * @param {string[][]} gameMap Game map
+ * @returns {HTMLDivElement} Player element
  */
 function drawPlayer(gameMap) {
     const player = document.createElement("div");
@@ -250,8 +294,10 @@ function drawPlayer(gameMap) {
 }
 
 /**
- * @param {string[][]} gameMap 
- * @returns {HTMLDivElement[]}
+ * Draws enemies on the game map. Enemies move to
+ * random position in area of 1 every 500ms.
+ * @param {string[][]} gameMap Game map
+ * @returns {HTMLDivElement[]} Enemies array
  */
 function drawEnemies(gameMap) {
     const enemies = [];
@@ -269,7 +315,6 @@ function drawEnemies(gameMap) {
         field.appendChild(enemy);
         enemies.push(enemy);
 
-
         const moveEnemy = moveEntity.bind(null, enemy);
         setInterval(() => {
             const newX = randInt(-1, 1);
@@ -280,19 +325,21 @@ function drawEnemies(gameMap) {
 }
 
 /**
- * @param {number} dx 
- * @param {number} dy 
+ * Moves player to [x + dx, y + dy] coords
+ * @param {number} dx X increase
+ * @param {number} dy Y increase
+ * @returns {[number, number]} New coords
  */
 function movePlayer(dx, dy) {
     const playerCoords = moveEntity(player, dx, dy);
-    const pickedHp = hps.find((hp) => coordsNear(getCoords(hp), playerCoords, 1));
+    const pickedHp = hps.find((hp) => coordsNear(getCoords(hp), playerCoords, 0));
     if (pickedHp) {
-        setPlayerHealth(HEAL)
+        addPlayerHealth(HEAL)
         pickedHp.remove();
         hps.splice(hps.indexOf(pickedHp), 1);
         return;
     }
-    const pickedSword = swords.find((sw) => coordsNear(getCoords(sw), playerCoords, 1));
+    const pickedSword = swords.find((sw) => coordsNear(getCoords(sw), playerCoords, 0));
     if (pickedSword) {
         setPlayerDamage(INCREASED_PLAYER_DAMAGE);
         pickedSword.remove();
@@ -300,21 +347,23 @@ function movePlayer(dx, dy) {
 
         setTimeout(() => setPlayerDamage(DEFAULT_PLAYER_DAMAGE), 10000);
     }
+    return playerCoords;
 };
 
 /**
- * @param {HTMLDivElement} player
- * @param {HTMLDivElement[]} enemies 
+ * Attacks all enemies in the area of 1
+ * @param {HTMLDivElement} player Player element
+ * @param {HTMLDivElement[]} enemies Array of enemies
  */
 function playerAttack(player, enemies) {
     const playerCoords = getCoords(player);
 
     const enemiesNearby = enemies.filter((enemy) => {
         const enemyCoords = getCoords(enemy);
-        return coordsNear(playerCoords, enemyCoords, 2);
+        return coordsNear(playerCoords, enemyCoords, 1);
     });
     enemiesNearby.forEach((enemy) => {
-        if (!setHealth(enemy, playerDamage)) {
+        if (!addHealth(enemy, playerDamage)) {
             enemy.remove();
             enemies.splice(enemies.indexOf(enemy), 1);
             enemyCount--;
