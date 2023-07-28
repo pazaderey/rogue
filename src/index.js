@@ -14,8 +14,11 @@ const HEAL = 40;
 const field = document.querySelector(".field");
 const damageDisplay = document.querySelector('.player-damage');
 const healthDisplay = document.querySelector('.player-health');
+const enemiesDisplay = document.querySelector('.enemies-left');
+
 let playerHealth = 100;
 let playerDamage = DEFAULT_PLAYER_DAMAGE;
+let enemyCount = 10;
 
 /**
  * @param {number} first 
@@ -252,7 +255,7 @@ function drawPlayer(gameMap) {
  */
 function drawEnemies(gameMap) {
     const enemies = [];
-    for (let enemyNumber = 0; enemyNumber < 10; enemyNumber++) {
+    for (let enemyNumber = 0; enemyNumber < enemyCount; enemyNumber++) {
         const [enemyX, enemyY] = [randInt(0, COLUMNS - 1), randInt(0, ROWS - 1)];
         if (gameMap[enemyY][enemyX] !== 'f') {
             enemyNumber--;
@@ -314,6 +317,9 @@ function playerAttack(player, enemies) {
         if (!setHealth(enemy, playerDamage)) {
             enemy.remove();
             enemies.splice(enemies.indexOf(enemy), 1);
+            enemyCount--;
+            enemiesDisplay.innerHTML = enemiesDisplay.innerHTML.split(' ')[0] + ` ${enemyCount}/10`;
+            !enemyCount && window.location.reload();
         }
     });
 }
