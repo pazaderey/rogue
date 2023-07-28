@@ -17,8 +17,8 @@ let playerDamage = -20;
  * @param {number} second 
  * @returns {boolean}
  */
-function areNear(first, second) {
-    return Math.abs(first - second) < 2;
+function areNear(first, second, area) {
+    return Math.abs(first - second) < area;
 }
 
 /**
@@ -26,8 +26,8 @@ function areNear(first, second) {
  * @param {[number, number]} secondCoords 
  * @returns {boolean}
  */
-function coordsNear(firstCoords, secondCoords) {
-    return areNear(firstCoords[0], secondCoords[0]) && areNear(firstCoords[1], secondCoords[1]);
+function coordsNear(firstCoords, secondCoords, area) {
+    return areNear(firstCoords[0], secondCoords[0], area) && areNear(firstCoords[1], secondCoords[1], area);
 }
 
 /**
@@ -62,7 +62,14 @@ function getHealth(entity) {
  */
 function setHealth(entity, dh) {
     const oldHealth = getHealth(entity);
-    entity.children[0].style.width = `${oldHealth + dh}%`;
+    let newHealth = oldHealth + dh;
+    if (newHealth > 100) {
+        newHealth = 100;
+    } else if (newHealth < 0) {
+        newHealth = 0;
+    }
+    entity.children[0].style.width = `${newHealth}%`;
+    return newHealth;
 }
 
 /**
@@ -102,31 +109,94 @@ function drawCorridors(gameMap, direction) {
     }
 }
 
-const drawSwords = (gameMap) => drawEntities(gameMap, 2, 'sw');
-const drawHP = (gameMap) => drawEntities(gameMap, 10, 'hp');
+const drawSwords = (gameMap) => drawUtilities(gameMap, 2, TILE_TYPES.sw);
+const drawHP = (gameMap) => drawUtilities(gameMap, 10, TILE_TYPES.hp);
 
 /**
  * @param {string[][]} gameMap 
  * @param {number} entityCount 
  * @param {'sw' | 'hp'} entityType 
  */
-function drawEntities(gameMap, entityCount, entityType) {
-    for (let entityNumber = 0; entityNumber < entityCount; entityNumber++) {
-        const [entityX, entityY] = [randInt(0, COLUMNS - 1), randInt(0, ROWS - 1)];
-        if (gameMap[entityY][entityX] !== 'f') {
-            entityNumber--;
+function drawUtilities(gameMap, utilCount, utilType) {
+    const utils = [];
+    for (let utilNumber = 0; utilNumber < utilCount; utilNumber++) {
+        const [utilX, utilY] = [randInt(0, COLUMNS - 1), randInt(0, ROWS - 1)];
+        if (gameMap[utilY][utilX] !== 'f') {
+            utilNumber--;
             continue;
         }
-        gameMap[entityY][entityX] = entityType;
+        const utility = document.createElement("div");
+        utility.className = `field tile ${utilType}`;
+        utility.style.top = `${utilY * 25}px`;
+        utility.style.left = `${utilX * 25}px`;
+        field.appendChild(utility);
+        utils.push(utility);
     }
+    return utils;
 }
 
+/**
+ * @param {HTMLDivElement} owner 
+ */
 function drawHealthBar(owner) {
     const healthBar = document.createElement("div");
     healthBar.className = 'health';
     healthBar.style.width = '100%';
     owner.appendChild(healthBar);
 }
+
+/**
+ * @returns {string[][]}
+ */
+function drawGameMap() {
+    const gameMap = new Array(ROWS);
+    for (let i = 0; i < gameMap.length; i++) {
+        gameMap[i] = new Array(COLUMNS).fill("w");
+    }    
+
+    drawRooms(gameMap);
+    drawCorridors(gameMap, "x");
+    drawCorridors(gameMap, "y");
+
+    for (let i = 0; i < gameMap.length; i++) {
+        for (let j = 0; j < gameMap[i].length; j++) {
+            const tile = document.createElement("div");
+            tile.className = `field tile ${TILE_TYPES[gameMap[i][j]]}`;
+            tile.style.top = `${i * 25}px`;
+            tile.style.left = `${j * 25}px`;
+            field.appendChild(tile);
+        }
+    }
+
+    return gameMap;
+}
+
+/**
+ * @param {HTMLDivElement} entity 
+ * @param {number} dx 
+ * @param {number} dy
+ * @returns {[number, number]}
+ */
+function moveEntity(entity, dx, dy) {
+    const oldX = parseInt(entity.style.left) / 25;
+    const oldY = parseInt(entity.style.top) / 25;
+    let newX = ((oldX + dx) % COLUMNS);
+    let newY = ((oldY + dy) % ROWS);
+    newX = newX < 0 ? COLUMNS - 1 : newX;
+    newY = newY < 0 ? ROWS - 1 : newY;
+    if (gameMap[newY][newX] === 'w') {
+        return [oldX, oldY];
+    }
+    entity.style.top = `${newY * 25}px`;
+    entity.style.left = `${newX * 25}px`;
+    return [newX, newY];
+}
+
+const gameMap = drawGameMap();
+const swords = drawSwords(gameMap);
+const hps = drawHP(gameMap);
+const enemies = drawEnemies(gameMap);
+const player = drawPlayer(gameMap);
 
 /**
  * @param {string[][]} gameMap
@@ -151,56 +221,6 @@ function drawPlayer(gameMap) {
 }
 
 /**
- * @returns {string[][]}
- */
-function drawGameMap() {
-
-    const gameMap = new Array(ROWS);
-    for (let i = 0; i < gameMap.length; i++) {
-        gameMap[i] = new Array(COLUMNS).fill("w");
-    }    
-
-    drawRooms(gameMap);
-
-    drawCorridors(gameMap, "x");
-    drawCorridors(gameMap, "y");
-
-    drawSwords(gameMap);
-    drawHP(gameMap);
-
-    for (let i = 0; i < gameMap.length; i++) {
-        for (let j = 0; j < gameMap[i].length; j++) {
-            const tile = document.createElement("div");
-            tile.className = `field tile ${TILE_TYPES[gameMap[i][j]]}`;
-            tile.style.top = `${i * 25}px`;
-            tile.style.left = `${j * 25}px`;
-            field.appendChild(tile);
-        }
-    }
-
-    return gameMap;
-}
-
-/**
- * @param {HTMLDivElement} entity 
- * @param {number} dx 
- * @param {number} dy
- */
-function moveEntity(entity, dx, dy) {
-    const oldX = parseInt(entity.style.left) / 25;
-    const oldY = parseInt(entity.style.top) / 25;
-    let newX = ((oldX + dx) % COLUMNS);
-    let newY = ((oldY + dy) % ROWS);
-    newX = newX < 0 ? COLUMNS - 1 : newX;
-    newY = newY < 0 ? ROWS - 1 : newY;
-    if (gameMap[newY][newX] === 'w') {
-        return;
-    }
-    entity.style.top = `${newY * 25}px`;
-    entity.style.left = `${newX * 25}px`;
-}
-
-/**
  * @param {string[][]} gameMap 
  * @returns {HTMLDivElement[]}
  */
@@ -218,11 +238,10 @@ function drawEnemies(gameMap) {
         enemy.style.left = `${enemyX* 25}px`;
         drawHealthBar(enemy);
         field.appendChild(enemy);
+        enemies.push(enemy);
 
 
         const moveEnemy = moveEntity.bind(null, enemy);
-        enemies.push(enemy);
-
         setInterval(() => {
             const newX = randInt(-1, 1);
             newX ? moveEnemy(newX, 0) : moveEnemy(0, randInt(-1, 1));
@@ -231,10 +250,24 @@ function drawEnemies(gameMap) {
     return enemies;
 }
 
-const gameMap = drawGameMap();
-const enemies = drawEnemies(gameMap);
-const player = drawPlayer(gameMap);
-const movePlayer = moveEntity.bind(null, player);
+/**
+ * @param {number} dx 
+ * @param {number} dy 
+ */
+function movePlayer(dx, dy) {
+    const playerCoords = moveEntity(player, dx, dy);
+    const pickedHp = hps.find((hp) => coordsNear(getCoords(hp), playerCoords, 1));
+    if (pickedHp) {
+        setHealth(player, +10);
+        pickedHp && pickedHp.remove();
+        return;
+    }
+    const pickedSword = swords.find((sw) => coordsNear(getCoords(sw), playerCoords, 1));
+    if (pickedSword) {
+        playerDamage = -40;
+        pickedSword.remove();
+    }
+};
 
 /**
  * @param {HTMLDivElement} player
@@ -245,31 +278,23 @@ function playerAttack(player, enemies) {
 
     const enemiesNearby = enemies.filter((enemy) => {
         const enemyCoords = getCoords(enemy);
-        return coordsNear(playerCoords, enemyCoords);
+        return coordsNear(playerCoords, enemyCoords, 2);
     });
     enemiesNearby.forEach((enemy) => {
-        setHealth(enemy, playerDamage);
-        if (getHealth(enemy) === 0) {
-            enemy.remove();
-        }
+        !setHealth(enemy, playerDamage) && enemy.remove();
     });
 }
-
-function enemyAttack()
 
 const KEY_CODES = {
     'KeyW': () => movePlayer(0, -1),
     'KeyA': () => movePlayer(-1, 0),
     'KeyS': () => movePlayer(0, 1),
     'KeyD': () => movePlayer(1, 0),
+    'Space': () => playerAttack(player, enemies),
 }
 
 document.addEventListener("keydown", (event) => {
-    if (event.code === 'Space') {
-        playerAttack(player, enemies);
-        return;
-    }
-    if (!['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
+    if (!['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].includes(event.code)) {
         return;
     }
     const handler = KEY_CODES[event.code];
