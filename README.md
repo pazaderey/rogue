@@ -14,3 +14,4 @@ Open index.html.
 1. Attack all nearby enemies with <kbd>Space</kbd>
 1. Pick health potion for heal
 1. Pick sword to increase damage
+1. Game reloads if you die

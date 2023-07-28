@@ -7,10 +7,15 @@ const TILE_TYPES = {
     'hp': 'tileHP',
 };
 const ENEMY_DAMAGE = -20;
+const DEFAULT_PLAYER_DAMAGE = -20;
+const INCREASED_PLAYER_DAMAGE = -40;
+const HEAL = 40;
 
 const field = document.querySelector(".field");
+const damageDisplay = document.querySelector('.player-damage');
+const healthDisplay = document.querySelector('.player-health');
 let playerHealth = 100;
-let playerDamage = -20;
+let playerDamage = DEFAULT_PLAYER_DAMAGE;
 
 /**
  * @param {number} first 
@@ -37,6 +42,11 @@ function coordsNear(firstCoords, secondCoords, area) {
  */
 function randInt(start, end) {
     return Math.round(Math.random() * (end - start) + start);
+}
+
+function setPlayerDamage(newDamage) {
+    playerDamage = newDamage;
+    damageDisplay.innerHTML = damageDisplay.innerHTML.split(' ')[0] + ` ${Math.abs(newDamage)}`;
 }
 
 /**
@@ -198,6 +208,22 @@ const hps = drawHP(gameMap);
 const enemies = drawEnemies(gameMap);
 const player = drawPlayer(gameMap);
 
+const setPlayerHealth = (dh) => {
+    const newHealth = setHealth(player, dh);
+    healthDisplay.innerHTML = healthDisplay.innerHTML.split(' ')[0] + ` ${newHealth}`;
+    return newHealth;
+}
+
+function checkForEnemies(player) {
+    const playerCoords = getCoords(player);
+
+    const enemiesNearby = enemies.filter((enemy) => {
+        const enemyCoords = getCoords(enemy);
+        return coordsNear(playerCoords, enemyCoords, 2);
+    });
+    !setPlayerHealth(ENEMY_DAMAGE * enemiesNearby.length) && window.location.reload();
+}
+
 /**
  * @param {string[][]} gameMap
  * @returns {HTMLDivElement}
@@ -216,7 +242,7 @@ function drawPlayer(gameMap) {
     player.style.left = `${playerX * 25}px`;
     drawHealthBar(player);
     field.appendChild(player);
-    
+    setInterval(() => checkForEnemies(player), 1000);
     return player;
 }
 
@@ -258,14 +284,18 @@ function movePlayer(dx, dy) {
     const playerCoords = moveEntity(player, dx, dy);
     const pickedHp = hps.find((hp) => coordsNear(getCoords(hp), playerCoords, 1));
     if (pickedHp) {
-        setHealth(player, +10);
-        pickedHp && pickedHp.remove();
+        setPlayerHealth(HEAL)
+        pickedHp.remove();
+        hps.splice(hps.indexOf(pickedHp), 1);
         return;
     }
     const pickedSword = swords.find((sw) => coordsNear(getCoords(sw), playerCoords, 1));
     if (pickedSword) {
-        playerDamage = -40;
+        setPlayerDamage(INCREASED_PLAYER_DAMAGE);
         pickedSword.remove();
+        swords.splice(swords.indexOf(pickedSword, 1));
+
+        setTimeout(() => setPlayerDamage(DEFAULT_PLAYER_DAMAGE), 10000);
     }
 };
 
@@ -281,7 +311,10 @@ function playerAttack(player, enemies) {
         return coordsNear(playerCoords, enemyCoords, 2);
     });
     enemiesNearby.forEach((enemy) => {
-        !setHealth(enemy, playerDamage) && enemy.remove();
+        if (!setHealth(enemy, playerDamage)) {
+            enemy.remove();
+            enemies.splice(enemies.indexOf(enemy), 1);
+        }
     });
 }
 

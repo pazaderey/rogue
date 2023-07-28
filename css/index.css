@@ -96,3 +96,8 @@ h1 {
     clear: both;
     display: block;
 }
+
+.attributes {
+    position: relative;
+    margin-left: 1010px;
+}
