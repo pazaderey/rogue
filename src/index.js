@@ -6,19 +6,25 @@ const TILE_TYPES = {
     'sw': 'tileSW',
     'hp': 'tileHP',
 };
-const ENEMY_DAMAGE = -20;
+const ENEMY_DAMAGE = -30;
+const DEFAULT_HEALTH = 100;
 const DEFAULT_PLAYER_DAMAGE = -20;
 const INCREASED_PLAYER_DAMAGE = -40;
 const HEAL = +40;
+const MAX_ENEMIES = 10;
 
 const field = document.querySelector(".field");
 const damageDisplay = document.querySelector('.player-damage');
 const healthDisplay = document.querySelector('.player-health');
 const enemiesDisplay = document.querySelector('.enemies-left');
 
-let playerHealth = 100;
+
+let playerHealth = DEFAULT_HEALTH;
 let playerDamage = DEFAULT_PLAYER_DAMAGE;
-let enemyCount = 10;
+let enemyCount = MAX_ENEMIES;
+damageDisplay.innerHTML = damageDisplay.innerHTML.split(' ')[0] + ` ${Math.abs(playerDamage)}`;
+healthDisplay.innerHTML = healthDisplay.innerHTML.split(' ')[0] + ` ${playerHealth}`;
+enemiesDisplay.innerHTML = enemiesDisplay.innerHTML.split(' ')[0] + ` ${enemyCount}/${MAX_ENEMIES}`;
 
 /**
  * Returns either 2 numbers are near in the given area.
@@ -52,6 +58,21 @@ function coordsNear(firstCoords, secondCoords, area) {
  */
 function randInt(start, end) {
     return Math.round(Math.random() * (end - start) + start);
+}
+
+/**
+ * Creates <div> element for the game
+ * @param {string} elementType Class name for the element
+ * @param {number} x X coordinate
+ * @param {number} y Y coordinate
+ * @returns {HTMLDivElement} Resulting element
+ */
+function createDivElement(elementType, x, y) {
+    const element = document.createElement("div");
+    element.className = `field tile ${elementType}`;
+    element.style.top = `${y * 25}px`;
+    element.style.left = `${x * 25}px`;
+    return element;
 }
 
 /**
@@ -168,10 +189,7 @@ function drawUtilities(gameMap, utilCount, utilType) {
             utilNumber--;
             continue;
         }
-        const utility = document.createElement("div");
-        utility.className = `field tile ${utilType}`;
-        utility.style.top = `${utilY * 25}px`;
-        utility.style.left = `${utilX * 25}px`;
+        const utility = createDivElement(utilType, utilX, utilY);
         field.appendChild(utility);
         utils.push(utility);
     }
@@ -179,14 +197,12 @@ function drawUtilities(gameMap, utilCount, utilType) {
 }
 
 /**
- * Draws health bar for the owner
- * @param {HTMLDivElement} owner Owner of the health bar
+ * Check are there unreachable spaces on the map
+ * @param {string[][]} gameMap Game map
+ * @returns {boolean} There are unreachable spaces
  */
-function drawHealthBar(owner) {
-    const healthBar = document.createElement("div");
-    healthBar.className = 'health';
-    healthBar.style.width = '100%';
-    owner.appendChild(healthBar);
+function checkForUnreachable(gameMap) {
+    
 }
 
 /**
@@ -197,7 +213,7 @@ function drawGameMap() {
     const gameMap = new Array(ROWS);
     for (let i = 0; i < gameMap.length; i++) {
         gameMap[i] = new Array(COLUMNS).fill("w");
-    }    
+    }
 
     drawRooms(gameMap);
     drawCorridors(gameMap, "x");
@@ -205,10 +221,7 @@ function drawGameMap() {
 
     for (let i = 0; i < gameMap.length; i++) {
         for (let j = 0; j < gameMap[i].length; j++) {
-            const tile = document.createElement("div");
-            tile.className = `field tile ${TILE_TYPES[gameMap[i][j]]}`;
-            tile.style.top = `${i * 25}px`;
-            tile.style.left = `${j * 25}px`;
+            const tile = createDivElement(TILE_TYPES[gameMap[i][j]], j, i);
             field.appendChild(tile);
         }
     }
@@ -238,12 +251,6 @@ function moveEntity(entity, dx, dy) {
     return [newX, newY];
 }
 
-const gameMap = drawGameMap();
-const swords = drawSwords(gameMap);
-const hps = drawHP(gameMap);
-const enemies = drawEnemies(gameMap);
-const player = drawPlayer(gameMap);
-
 /**
  * Increases player health by dh
  * @param {number} dh Health increase
@@ -271,13 +278,22 @@ function checkForEnemies(player) {
 }
 
 /**
+ * Draws health bar for the owner
+ * @param {HTMLDivElement} owner Owner of the health bar
+ */
+function drawHealthBar(owner) {
+    const healthBar = document.createElement("div");
+    healthBar.className = 'health';
+    healthBar.style.width = `${DEFAULT_HEALTH}%`;
+    owner.appendChild(healthBar);
+}
+
+/**
  * Draws player on the game map
  * @param {string[][]} gameMap Game map
  * @returns {HTMLDivElement} Player element
  */
 function drawPlayer(gameMap) {
-    const player = document.createElement("div");
-    player.className = "field tile tileP";
     let playerX = 0, playerY = 0;
     while (true) {
         [playerX, playerY] = [randInt(0, COLUMNS - 1), randInt(0, ROWS - 1)];
@@ -285,8 +301,7 @@ function drawPlayer(gameMap) {
             break;
         }
     }
-    player.style.top = `${playerY * 25}px`;
-    player.style.left = `${playerX * 25}px`;
+    const player = createDivElement("tileP", playerX, playerY);
     drawHealthBar(player);
     field.appendChild(player);
     setInterval(() => checkForEnemies(player), 1000);
@@ -307,10 +322,7 @@ function drawEnemies(gameMap) {
             enemyNumber--;
             continue;
         }
-        const enemy = document.createElement("div");
-        enemy.className = "field tile tileE";
-        enemy.style.top = `${enemyY * 25}px`;
-        enemy.style.left = `${enemyX* 25}px`;
+        const enemy = createDivElement("tileE", enemyX, enemyY);
         drawHealthBar(enemy);
         field.appendChild(enemy);
         enemies.push(enemy);
@@ -345,7 +357,7 @@ function movePlayer(dx, dy) {
         pickedSword.remove();
         swords.splice(swords.indexOf(pickedSword, 1));
 
-        setTimeout(() => setPlayerDamage(DEFAULT_PLAYER_DAMAGE), 10000);
+        setTimeout(() => setPlayerDamage(DEFAULT_PLAYER_DAMAGE), 5000);
     }
     return playerCoords;
 };
@@ -367,11 +379,17 @@ function playerAttack(player, enemies) {
             enemy.remove();
             enemies.splice(enemies.indexOf(enemy), 1);
             enemyCount--;
-            enemiesDisplay.innerHTML = enemiesDisplay.innerHTML.split(' ')[0] + ` ${enemyCount}/10`;
+            enemiesDisplay.innerHTML = enemiesDisplay.innerHTML.split(' ')[0] + ` ${enemyCount}/${MAX_ENEMIES}`;
             !enemyCount && window.location.reload();
         }
     });
 }
+
+const gameMap = drawGameMap();
+const swords = drawSwords(gameMap);
+const hps = drawHP(gameMap);
+const enemies = drawEnemies(gameMap);
+const player = drawPlayer(gameMap);
 
 const KEY_CODES = {
     'KeyW': () => movePlayer(0, -1),
