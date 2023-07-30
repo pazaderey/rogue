@@ -249,8 +249,7 @@ function addHealth(entity, dh) {
  * @returns {[number, number]} New coords
  */
 function moveEntity(entity, dx, dy) {
-    const oldX = parseInt(entity.style.left) / 25;
-    const oldY = parseInt(entity.style.top) / 25;
+    const [oldX, oldY] = getCoords(entity);
     let newX = ((oldX + dx) % COLUMNS);
     let newY = ((oldY + dy) % ROWS);
     newX = newX < 0 ? COLUMNS - 1 : newX;
